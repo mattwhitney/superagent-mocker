@@ -13,6 +13,7 @@ mock.get       = defineRoute.bind(null, 'GET');
 mock.post      = defineRoute.bind(null, 'POST');
 mock.put       = defineRoute.bind(null, 'PUT');
 mock.del       = defineRoute.bind(null, 'DELETE');
+mock.delete    = defineRoute.bind(null, 'DELETE');
 mock.patch     = defineRoute.bind(null, 'PATCH');
 
 /**
@@ -46,7 +47,8 @@ var methodsMapping = {
   get: 'GET',
   post: 'POST',
   put: 'PUT',
-  del: 'DELETE',
+	del: 'DELETE',
+	delete: 'DELETE',
   patch: 'PATCH'
 };
 
@@ -173,7 +175,7 @@ function mock(superagent) {
 }
 
 mock.unmock = function(superagent) {
-  ['get', 'post', 'put', 'patch', 'del'].forEach(function(method) {
+  ['get', 'post', 'put', 'patch', 'del', 'delete'].forEach(function(method) {
     superagent[method] = originalMethods[method];
   });
 
