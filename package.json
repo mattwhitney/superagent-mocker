@@ -1,6 +1,6 @@
 {
-  "name": "superagent-mocker",
-  "version": "0.5.2",
+  "name": "mattwhitney-superagent-mocker",
+  "version": "0.5.3",
   "description": "Pretty simple mocks for the CRUD and REST API",
   "main": "index.js",
   "scripts": {
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:shuvalov-anton/superagent-mocker.git"
+    "url": "git@github.com:mattwhitney/superagent-mocker.git"
   },
   "keywords": [
     "superagent",
