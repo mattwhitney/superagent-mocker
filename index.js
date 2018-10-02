@@ -268,13 +268,16 @@ Route.prototype.match = function(method, url, body) {
       headers: req.headers,
       query: req.query
     });
-    return mergeObjects(
+
+    const response = mergeObjects(
       {
-        status: 200,
-        statusType: 2
+        status: 200
       },
       handlerValue
     );
+
+    response.statusType = Math.floor(response.status / 100);
+    return response;
   };
 };
 
