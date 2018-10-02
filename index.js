@@ -1,26 +1,26 @@
-'use strict';
+"use strict";
 
 /**
  * Dependencies
  */
-var pathtoRegexp = require('path-to-regexp');
+var pathtoRegexp = require("path-to-regexp");
 
 /**
  * Expose public API
  */
 module.exports = mock;
-mock.get       = defineRoute.bind(null, 'GET');
-mock.post      = defineRoute.bind(null, 'POST');
-mock.put       = defineRoute.bind(null, 'PUT');
-mock.del       = defineRoute.bind(null, 'DELETE');
-mock.delete    = defineRoute.bind(null, 'DELETE');
-mock.patch     = defineRoute.bind(null, 'PATCH');
+mock.get = defineRoute.bind(null, "GET");
+mock.post = defineRoute.bind(null, "POST");
+mock.put = defineRoute.bind(null, "PUT");
+mock.del = defineRoute.bind(null, "DELETE");
+mock.delete = defineRoute.bind(null, "DELETE");
+mock.patch = defineRoute.bind(null, "PATCH");
 
 /**
  * Request timeout
  * @type {number|function}
  */
-mock.timeout    = 0;
+mock.timeout = 0;
 
 /**
  * List of registred routes
@@ -37,19 +37,19 @@ var originalMethods = {};
  * Unregister all routes
  */
 mock.clearRoutes = function() {
-  routes.splice(0, routes.length)
+  routes.splice(0, routes.length);
 };
 
 /**
  * Map api method to http method
  */
 var methodsMapping = {
-  get: 'GET',
-  post: 'POST',
-  put: 'PUT',
-	del: 'DELETE',
-	delete: 'DELETE',
-  patch: 'PATCH'
+  get: "GET",
+  post: "POST",
+  put: "PUT",
+  del: "DELETE",
+  delete: "DELETE",
+  patch: "PATCH"
 };
 
 /**
@@ -66,7 +66,6 @@ mock.clearRoute = function(method, url) {
  * Mock
  */
 function mock(superagent) {
-
   // don't patch if superagent was patched already
   if (superagent._patchedBySuperagentMocker) return mock;
   superagent._patchedBySuperagentMocker = true;
@@ -82,41 +81,46 @@ function mock(superagent) {
   var reqProto = superagent.Request.prototype;
 
   // Patch Request.end()
-  var oldEnd = originalMethods.end = superagent.Request.prototype.end;
+  var oldEnd = (originalMethods.end = superagent.Request.prototype.end);
   reqProto.end = function(cb) {
     var state = this._superagentMockerState;
     if (state && state.current) {
       var current = state.current;
-      setTimeout(function(request) {
-        var error = null;
-        var response = null;
-        try {
-          response = current(request);
-          if (!/20[0-6]/.test(response.status)) {
-            // superagent puts status and response on the error it returns,
-            // which should be an actual instance of Error
-            // See http://visionmedia.github.io/superagent/#error-handling
-            error = new Error(response.status);
-            error.status = response.status;
-            error.response = response;
-            response = null
-          } else {
-            error = null
+      setTimeout(
+        function(request) {
+          var error = null;
+          var response = null;
+          try {
+            response = current(request);
+            if (!/20[0-6]/.test(response.status)) {
+              // superagent puts status and response on the error it returns,
+              // which should be an actual instance of Error
+              // See http://visionmedia.github.io/superagent/#error-handling
+              error = new Error(response.status);
+              error.status = response.status;
+              error.statusType = Math.floor(response.status / 100);
+              error.response = response;
+              response = null;
+            } else {
+              error = null;
+            }
+          } catch (ex) {
+            error = ex;
+            response = null;
           }
-        } catch (ex) {
-          error = ex
-          response = null
-        }
 
-        cb && cb(error, response);
-      }, value(mock.timeout), state.request);
+          cb && cb(error, response);
+        },
+        value(mock.timeout),
+        state.request
+      );
     } else {
       oldEnd.call(this, cb);
     }
   };
 
   // Patch Request.set()
-  var oldSet = originalMethods.set = reqProto.set;
+  var oldSet = (originalMethods.set = reqProto.set);
   reqProto.set = function(key, val) {
     var state = this._superagentMockerState;
     if (!state || !state.current) {
@@ -129,15 +133,15 @@ function mock(superagent) {
       }
       return this;
     }
-    if (typeof key !== 'string') {
-      throw new TypeError('Header keys must be strings.');
+    if (typeof key !== "string") {
+      throw new TypeError("Header keys must be strings.");
     }
     state.request.headers[key.toLowerCase()] = val;
     return this;
   };
 
   // Patch Request.send()
-  var oldSend = originalMethods.send = reqProto.send;
+  var oldSend = (originalMethods.send = reqProto.send);
   reqProto.send = function(data) {
     var state = this._superagentMockerState;
     if (!state || !state.current) {
@@ -145,15 +149,14 @@ function mock(superagent) {
     }
     if (isObject(data)) {
       state.request.body = mergeObjects(state.current.body, data);
-    }
-    else {
+    } else {
       state.request.body = data;
     }
     return this;
   };
 
   // Patch Request.query()
-  var oldQuery = originalMethods.query = reqProto.query;
+  var oldQuery = (originalMethods.query = reqProto.query);
   reqProto.query = function(objectOrString) {
     var state = this._superagentMockerState;
     if (!state || !state.current) {
@@ -162,26 +165,24 @@ function mock(superagent) {
     var obj = {};
     if (isString(objectOrString)) {
       obj = parseQueryString(objectOrString);
-    }
-    else if (isObject(objectOrString)) {
+    } else if (isObject(objectOrString)) {
       obj = stringifyValues(objectOrString);
     }
     state.request.query = mergeObjects(state.request.query, obj);
     return this;
-  }
+  };
 
   return mock; // chaining
-
 }
 
 mock.unmock = function(superagent) {
-  ['get', 'post', 'put', 'patch', 'del', 'delete'].forEach(function(method) {
+  ["get", "post", "put", "patch", "del", "delete"].forEach(function(method) {
     superagent[method] = originalMethods[method];
   });
 
   var reqProto = superagent.Request.prototype;
 
-  ['end', 'set', 'send'].forEach(function(method) {
+  ["end", "set", "send"].forEach(function(method) {
     reqProto[method] = originalMethods[method];
   });
 
@@ -203,11 +204,13 @@ function match(method, url, data) {
  * Register url and callback for `get`
  */
 function defineRoute(method, url, handler) {
-  routes.push(new Route({
-    url: url,
-    handler: handler,
-    method: method
-  }));
+  routes.push(
+    new Route({
+      url: url,
+      handler: handler,
+      method: method
+    })
+  );
   return mock;
 }
 
@@ -215,8 +218,8 @@ function defineRoute(method, url, handler) {
  * Patch superagent method
  */
 function patch(superagent, prop, method) {
-  var old = originalMethods[prop] = superagent[prop];
-  superagent[prop] = function (url, data, fn) {
+  var old = (originalMethods[prop] = superagent[prop]);
+  superagent[prop] = function(url, data, fn) {
     var current = match(method, url, data);
     var orig = old.call(this, url, data, fn);
     orig._superagentMockerState = {
@@ -225,7 +228,7 @@ function patch(superagent, prop, method) {
         headers: {},
         body: {},
         query: {}
-      },
+      }
     };
     return orig;
   };
@@ -235,10 +238,10 @@ function patch(superagent, prop, method) {
  * Route with given url
  */
 var Route = function Route(state) {
-  this.url     = state.url;
+  this.url = state.url;
   this.handler = state.handler;
-  this.method  = state.method;
-  this.regexp  = pathtoRegexp(this.url, this.keys = []);
+  this.method = state.method;
+  this.regexp = pathtoRegexp(this.url, (this.keys = []));
 };
 
 /**
@@ -252,7 +255,7 @@ Route.prototype.match = function(method, url, body) {
   for (var i = 1, len = m.length; i < len; ++i) {
     var key = this.keys[i - 1];
     var val = m[i];
-    if (val !== undefined || !(hasOwnProperty.call(params, key.name))) {
+    if (val !== undefined || !hasOwnProperty.call(params, key.name)) {
       params[key.name] = val;
     }
   }
@@ -265,12 +268,15 @@ Route.prototype.match = function(method, url, body) {
       headers: req.headers,
       query: req.query
     });
-    return mergeObjects({
-      status: 200
-    }, handlerValue);
+    return mergeObjects(
+      {
+        status: 200,
+        statusType: 2
+      },
+      handlerValue
+    );
   };
 };
-
 
 /**
  * Helpers
@@ -282,7 +288,7 @@ Route.prototype.match = function(method, url, body) {
  * @return bool True if variable is an object
  */
 function isObject(obj) {
-  return null != obj && 'object' == typeof obj;
+  return null != obj && "object" == typeof obj;
 }
 
 /**
@@ -291,7 +297,7 @@ function isObject(obj) {
  * @return bool True if variable is a string
  */
 function isString(val) {
-  return 'string' === typeof val;
+  return "string" === typeof val;
 }
 
 /**
@@ -299,9 +305,7 @@ function isString(val) {
  * @param {fn|any} val Value or fn to exec
  */
 function value(val) {
-  return 'function' === typeof val
-    ? val()
-    : val;
+  return "function" === typeof val ? val() : val;
 }
 
 /**
@@ -310,8 +314,8 @@ function value(val) {
  * @param s string
  */
 function parseQueryString(s) {
-  return s.split('&').reduce(function (obj, param) {
-    var parts = param.split('=');
+  return s.split("&").reduce(function(obj, param) {
+    var parts = param.split("=");
     var key = parts.shift();
     var val = parts.shift();
     if (key && val) {
@@ -336,13 +340,13 @@ function stringifyValues(oldObj) {
  */
 function mergeObjects() {
   var out = {},
-      p;
+    p;
 
-  for(var index = 0; index < arguments.length; index++) {
-    var arg = arguments[index]
-    if(isObject(arg)) {
-      for(var prop in arg) {
-        if(arg.hasOwnProperty(prop)) {
+  for (var index = 0; index < arguments.length; index++) {
+    var arg = arguments[index];
+    if (isObject(arg)) {
+      for (var prop in arg) {
+        if (arg.hasOwnProperty(prop)) {
           out[prop] = arg[prop];
         }
       }
