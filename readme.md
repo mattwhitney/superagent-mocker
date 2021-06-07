@@ -1,7 +1,9 @@
 # superagent-mocker
 
-[![Build Status](https://travis-ci.org/shuvalov-anton/superagent-mocker.svg?branch=master)](https://travis-ci.org/shuvalov-anton/superagent-mocker)
-[![Coverage Status](https://coveralls.io/repos/shuvalov-anton/superagent-mocker/badge.svg?service=github&branch=master)](https://coveralls.io/github/shuvalov-anton/superagent-mocker?branch=master)
+[![Build Status](https://travis-ci.org/A/superagent-mocker.svg?branch=master)](https://travis-ci.org/A/superagent-mocker)
+[![Coverage Status](https://coveralls.io/repos/github/A/superagent-mocker/badge.svg?branch=master)](https://coveralls.io/github/A/superagent-mocker?branch=master)
+[![npm version](https://img.shields.io/npm/v/superagent-mocker.svg)](https://www.npmjs.com/package/superagent-mocker)
+[![npm downloads](https://img.shields.io/npm/dm/superagent-mocker.svg)](https://www.npmjs.com/package/superagent-mocker)
 
 REST API mocker for the browsers. LOOK MA NO BACKEND! 👐
 
@@ -92,7 +94,7 @@ request
 ;
 ```
 
-`mock.put()` method works in a similar way.
+`mock.put()`, `mock.patch()` methods works in a similar way.
 
 ### Teardown
 
@@ -123,6 +125,24 @@ define('My API module', function(){
 
 })
 ```
+
+Or you can remove only one specified route (by method and url)
+
+```js
+// to register route
+mock.get('/me', function(){done()})
+
+...
+
+// to remove registered handler
+mock.clearRoute('get', '/me');
+
+```
+
+### Rollback library effect
+
+In some cases it will be useful to remove patches from superagent lib after using mocks.
+In this cases you can use ```mock.unmock(superagent)``` method, that will rollback all patches that ```mock(superagent)``` call make.
 
 ## License
 

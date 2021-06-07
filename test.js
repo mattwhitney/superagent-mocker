@@ -11,7 +11,6 @@ var mock    = process.env.SM_COV
                 ? require('./index-cov')(request)
                 : require('./index')(request);
 
-
 describe('superagent mock', function() {
 
   beforeEach(function() {
@@ -32,6 +31,24 @@ describe('superagent mock', function() {
       });
     });
 
+    it('should mock multiple requests', function(done) {
+      mock.get('/thread/:id', function(req) {
+        return { id: req.params.id };
+      });
+      var finished = 0;
+      var r1 = request.get('/thread/1');
+      var r2 = request.get('/thread/2');
+
+      r1.end(function(_, data) {
+        data.should.have.property('id', '1');
+        if (++finished == 2) done();
+      });
+      r2.end(function(_, data) {
+        data.should.have.property('id', '2');
+        if (++finished == 2) done();
+      });
+    });
+
     it('should mock for post', function(done) {
       mock.post('/topics/:id', function(req) {
         return {
@@ -45,8 +62,7 @@ describe('superagent mock', function() {
           data.should.have.property('id', '5');
           data.should.have.property('content', 'Hello world');
           done();
-        })
-      ;
+        });
     });
 
     it('should mock for put', function(done) {
@@ -54,13 +70,25 @@ describe('superagent mock', function() {
         return { id: req.params.id, content: req.body.content };
       });
       request
-        .put('/topics/7', { id: 7, content: 'hello world, bitch!11' })
+        .put('/topics/7', { id: 7, content: 'hello world!11' })
         .end(function(_, data) {
           data.should.have.property('id', '7');
-          data.should.have.property('content', 'hello world, bitch!11');
+          data.should.have.property('content', 'hello world!11');
           done();
-        })
-      ;
+        });
+    });
+
+    it('should mock for patch', function(done) {
+      mock.patch('/topics/:id', function(req) {
+        return { id: req.params.id, content: req.body.content };
+      });
+      request
+        .patch('/topics/7', { id: 7, content: 'hello world!11' })
+        .end(function(_, data) {
+          data.should.have.property('id', '7');
+          data.should.have.property('content', 'hello world!11');
+          done();
+        });
     });
 
     it('should mock for delete', function(done) {
@@ -73,8 +101,7 @@ describe('superagent mock', function() {
           data.should.have.property('id', '7');
           data.should.have.property('content', 'yay');
           done(); // just done
-        })
-      ;
+        });
     });
 
     it('should be async', function(done) {
@@ -84,8 +111,7 @@ describe('superagent mock', function() {
       });
       request
         .get('/async')
-        .end()
-      ;
+        .end();
       isAsync.should.be.true;
       done();
     });
@@ -93,6 +119,7 @@ describe('superagent mock', function() {
     it('should work correct with unmocked requests', function(done) {
       request
         .get('http://example.com')
+        .query({ foo: 'bar' })
         .end(function(err, res) {
           done(err);
         });
@@ -139,6 +166,29 @@ describe('superagent mock', function() {
         });
     });
 
+    it('should clear registered specific route', function(done) {
+      mock
+        .get('/topics', noop)
+        .get('/posters', function() {
+          return { id: 7 };
+        });
+      mock.clearRoute('get', '/topics');
+      request
+        .get('/topics')
+        .end(function(err, res) {
+          should.throws(function() {
+            should.ifError(err);
+          }, /ECONNREFUSED/);
+
+          request
+            .get('/posters')
+            .end(function(_, data) {
+              data.should.have.property('id', 7);
+              done();
+            });
+        });
+    });
+
     it('should provide error when method throws', function(done) {
       var error = Error('This should be in the callback!');
       mock.get('http://example.com', function(req) {
@@ -148,6 +198,31 @@ describe('superagent mock', function() {
         .get('http://example.com')
         .end(function(err, res) {
           err.should.equal(error);
+          done();
+        });
+    });
+
+    it('should not treat a 204 as an error', function(done) {
+      mock.get('/topics/:id', function(req) {
+        return {status: 204};
+      });
+      request.get('/topics/1')
+        .end(function(err, data) {
+          should.not.exist(err);
+          data.should.have.property('status', 204);
+          done();
+        });
+    });
+
+    it('should support status code in response', function(done) {
+      mock.get('/topics/:id', function(req) {
+        return {body: {}, status: 500};
+      });
+      request.get('/topics/1')
+        .end(function(err, data) {
+          err.should.have.property('status', 500);
+          err.should.have.property('response');
+          should.deepEqual(err.response, {body: {}, status: 500});
           done();
         });
     });
@@ -164,8 +239,7 @@ describe('superagent mock', function() {
           data.should.have.property('my-header', 'my-Value')
           data.should.have.property('user-agent', 'Opera Mini')
           done();
-        })
-      ;
+        });
     });
 
     it('should support multiple headers', function(done) {
@@ -212,12 +286,26 @@ describe('superagent mock', function() {
       ;
     });
 
+    it('should pass non-object data from send()', function(done) {
+      mock.post('/topics/:id', function(req) {
+        return { body: req.body };
+      });
+      request
+        .post('/topics/6')
+        .send('foo bar baz')
+        .end(function(_, data) {
+          should.equal(data.body, 'foo bar baz');
+          done();
+        })
+      ;
+    });
+
     it('should rewrite post() data by send()', function(done) {
       mock.post('/topics/:id', function(req) {
         return req.body;
       });
       request
-        .post('/topics/5', { content: 'Hello Universe'})
+        .post('/topics/5', { content: 'Hello Universe' })
         .send({ content: 'Hello world', title: 'Yay!' })
         .end(function(_, data) {
           data.should.have.property('title', 'Yay!');
@@ -227,11 +315,39 @@ describe('superagent mock', function() {
       ;
     });
 
+    it('should parse parameters from query()', function(done) {
+      mock.get('/topics/:id', function(req) {
+        return req;
+      });
+      request
+        .get('/topics/5')
+        .query('hello=world')
+        .query('xx=yy&zz=0')
+        .query({ test: 'yay' })
+        .query({ foo: 'bar', baz: 'bat' })
+        .end(function(_, data) {
+          data.should.have.property('query');
+          should.deepEqual(data.query, {
+            hello: 'world',
+            xx: 'yy',
+            zz: '0',
+            test: 'yay',
+            foo: 'bar',
+            baz: 'bat'
+          });
+          done();
+        })
+      ;
+    });
+
+    it('should remove patches by unmock()', function() {
+      mock.unmock(request);
+      (request._patchedBySuperagentMocker === void 0).should.be.true;
+    });
+
   });
 
 });
-
-
 
 /**
  * Just noop
